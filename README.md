@@ -11,7 +11,7 @@ Both **sequential** and **simultaneous** control modes are implemented, tested, 
 
 ## Demo
 
-Video walkthrough: [ADD YOUR VIDEO LINK HERE]
+Demo Video: https://youtu.be/RZjk_768i4s
 
 ---
 
