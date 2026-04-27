@@ -126,8 +126,8 @@ ros-turtlesim-swim-to-goal/
 ├── src/
 │   ├── pid_controller/
 │   │   ├── src/
-│   │   │   ├── motion_planner
-│   │   │   └── pid_controller
+│   │   │   ├── motion_planner.py
+│   │   │   └── pid_controller.py
 │   │   ├── CMakeLists.txt
 │   │   └── package.xml
 │   │
