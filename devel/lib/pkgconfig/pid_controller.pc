@@ -1,0 +1,8 @@
+prefix=/home/ubuntu/Lab_Deepanshu_Tanwar_ws/Lab3_Deepanshu_Tanwar_ws/devel
+
+Name: pid_controller
+Description: Description of pid_controller
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

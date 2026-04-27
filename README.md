@@ -1,140 +1,146 @@
-# ROS TurtleBot3 PID Motion Planning
+# ros-turtlesim-swim-to-goal
 
-A closed-loop PID motion controller for the **TurtleBot3 Waffle Pi** robot, simulated in **Gazebo** using **ROS**. The robot navigates from its current pose to any user-specified target pose `(x, y, θ)` using two independently tuned PID controllers:
+Ever wondered how a robot figures out how to get from point A to point B on its own?
 
-- Angular velocity controller
-- Linear velocity controller
-
-Both **sequential** and **simultaneous** control modes are implemented, tested, and verified against position and angle error bounds.
+This project answers that using ROS and TurtleSim. You give the turtle a target coordinate, and it navigates there by itself — no manual control, no hardcoded path. Just math, sensors, and a control loop running 50 times per second.
 
 ---
 
-## Demo
+## 🎥 Demo
 
 Video walkthrough: [ADD YOUR VIDEO LINK HERE]
 
 ---
 
-## System Architecture
+## 💡 The Idea
 
-Two ROS nodes communicate over three topics:
+The core idea is simple: **the turtle always knows where it is, and it always knows where it wants to go — so it just keeps correcting itself until it gets there.**
 
-```
-motion_planner.py  --/reference_pose-->  pid_controller.py  --/cmd_vel-->  Gazebo
-                   <-----------------------/odom-------------------------------
-```
+At every timestep the node asks two questions:
 
-| Topic             | Type                  | Description                       |
-|-------------------|-----------------------|-----------------------------------|
-| `/reference_pose` | `Float64MultiArray`   | Target pose `[xr, yr, θr, mode]`  |
-| `/odom`           | `nav_msgs/Odometry`   | Current robot pose `(x, y, θ)`    |
-| `/cmd_vel`        | `geometry_msgs/Twist` | Linear + angular velocity commands|
+- **How far am I from the goal?** → drive faster if far, slower if close
+- **Am I facing the right direction?** → turn to correct the heading
+
+This is called **proportional control** — the bigger the error, the bigger the correction. As the turtle gets closer, both errors shrink, and so do the velocities. The turtle naturally decelerates and stops right at the goal.
 
 ---
 
-## Control Modes
+## ⚙️ How It Works
 
-### Mode 0 — Sequential (Cleaner Path)
+### 1. The turtle reads its own position
 
-1. Turn to face the target point
-2. Drive straight to the target
-3. Turn to the final desired orientation
+The node subscribes to `/turtle1/pose` which gives the current `(x, y, θ)` in real time.
 
-### Mode 1 — Simultaneous (Faster)
-
-1. Drive and turn at the same time using both PIDs
-2. Linear speed is scaled by `cos(angle_error)` to prevent the robot from arcing off course when heading error is large
-3. Turn to the final desired orientation
-
----
-
-## PID Gains
-
-| Controller| Kp  | Ki    | Kd   | Output                       |
-|-----------|-----|-------|------|------------------------------|
-| Angular   | 3.0 | 0.002 | 0.8  | `angular.z` (max ±1.5 rad/s) |
-| Linear    | 0.8 | 0.001 | 0.15 | `linear.x` (max 0.20 m/s)    |
-
-Tuning method: Set Ki = Kd = 0 → increase Kp until oscillation → raise Kd to reduce overshoot → add small Ki to eliminate steady-state error.
-
----
-
-## Project Structure
+### 2. Two errors are computed every loop
 
 ```
-ros-turtlebot3-pid-motion-planning/
-├── pid_controller.py       # PID controller node (angular + linear)
-├── motion_planner.py       # Terminal UI node (goal input + live progress)
-└── README.md
+Error_position = sqrt((x_goal - x)² + (y_goal - y)²)
+Error_angle    = atan2(sin(goal_angle - θ), cos(goal_angle - θ))
 ```
+
+`Error_position` is the straight-line distance to the goal.
+`Error_angle` is how far off the turtle's heading is from the direction of the goal.
+
+### 3. Velocities are set proportional to the errors
+
+```
+Linear_velocity  = K_x * Error_position * cos(Error_angle)
+Angular_velocity = K_z * Error_angle
+```
+
+The `cos(Error_angle)` term is the key design choice — it scales down the forward speed when the turtle is still turning. Without it, the turtle would drive forward even while facing the wrong way and arc off course. With it, the turtle turns first, then drives — producing a clean, direct path.
+
+### 4. The loop runs until the turtle arrives
+
+When `Error_position < 0.5`, the turtle stops and immediately asks for the next goal.
+
+### Tuned Gains
+
+| Gain | Value | Effect |
+|---|---|---|
+| `K_x` | 1.5 | Controls forward speed |
+| `K_z` | 6.0 | Controls turning speed |
 
 ---
 
-## Getting Started
+## 🔁 ROS Topics
 
-### Prerequisites
+| Topic | Type | Role |
+|---|---|---|
+| `/turtle1/pose` | `turtlesim/Pose` | Reads current turtle position |
+| `/turtle1/cmd_vel` | `geometry_msgs/Twist` | Sends velocity commands |
 
-- ROS Noetic (Ubuntu 20.04)
-- TurtleBot3 packages
-- Gazebo
+---
+
+## 🚀 Run It Yourself
+
+### Requirements
+
+- Ubuntu 20.04
+- ROS Noetic
+- TurtleSim
 
 ```bash
-sudo apt install ros-noetic-turtlebot3 ros-noetic-turtlebot3-gazebo
-export TURTLEBOT3_MODEL=waffle_pi
+sudo apt install ros-noetic-turtlesim
 ```
 
 ### Setup
 
 ```bash
-# Create workspace and package
-mkdir -p ~/ros-turtlebot3-pid-motion-planning/src
-cd ~/ros-turtlebot3-pid-motion-planning/src
-catkin_create_pkg pid_controller rospy std_msgs geometry_msgs nav_msgs
-
-# Copy nodes
-cp pid_controller.py pid_controller/src/
-cp motion_planner.py pid_controller/src/
-
-# Make executable
-chmod +x pid_controller/src/pid_controller.py
-chmod +x pid_controller/src/motion_planner.py
-
-# Build
-cd ..
+git clone https://github.com/YOUR-USERNAME/ros-turtlesim-swim-to-goal.git
+cd ros-turtlesim-swim-to-goal
 catkin_make
 source devel/setup.bash
 ```
 
-### Run
+### Launch
 
-**Terminal 1** — Launch Gazebo:
+Open three terminals:
+
 ```bash
-roslaunch turtlebot3_gazebo turtlebot3_empty_world.launch
+# Terminal 1
+roscore
+
+# Terminal 2
+rosrun turtlesim turtlesim_node
+
+# Terminal 3
+rosrun autoturtle swim_to_goal.py
 ```
 
-**Terminal 2** — Start the PID controller:
-```bash
-rosrun pid_controller pid_controller.py
+Then enter a goal when prompted:
+```
+Enter x_goal (0-11): 7.0
+Enter y_goal (0-11): 5.0
 ```
 
-**Terminal 3** — Start the motion planner:
-```bash
-rosrun pid_controller motion_planner.py
-```
-
-Enter a target `(x, y, angle, mode)` in the terminal and the robot will navigate to it.
+The turtle navigates there and asks for the next goal automatically.
 
 ---
 
-## 🛠️ Tech Stack
+## 📁 Project Structure
 
-- **ROS Noetic** — middleware and node communication
-- **Gazebo** — robot simulation environment
-- **Python 3** — controller and planner implementation
-- **TurtleBot3 Waffle Pi** — differential drive robot model
+```
+ros-turtlesim-swim-to-goal/
+├── devel/
+├── src/
+│   ├── pid_controller/
+│   │   ├── src/
+│   │   │   ├── motion_planner
+│   │   │   └── pid_controller
+│   │   ├── CMakeLists.txt
+│   │   └── package.xml
+│   │
+│   └── CMakeLists.txt
+│
+└── README.md
+```
 
 ---
 
 ## 👨‍💻 Author
 
 **Deepanshu Tanwar**
+Autonomous Systems — Spring 2026
+
+[LinkedIn](https://www.linkedin.com/in/YOUR-PROFILE) | [GitHub](https://github.com/YOUR-USERNAME)
