@@ -6,13 +6,13 @@ This project answers that using ROS and TurtleSim. You give the turtle a target 
 
 ---
 
-## 🎥 Demo
+## Demo
 
 Video walkthrough: [ADD YOUR VIDEO LINK HERE]
 
 ---
 
-## 💡 The Idea
+## The Idea
 
 The core idea is simple: **the turtle always knows where it is, and it always knows where it wants to go — so it just keeps correcting itself until it gets there.**
 
@@ -25,7 +25,7 @@ This is called **proportional control** — the bigger the error, the bigger the
 
 ---
 
-## ⚙️ How It Works
+## How It Works
 
 ### 1. The turtle reads its own position
 
@@ -63,7 +63,7 @@ When `Error_position < 0.5`, the turtle stops and immediately asks for the next 
 
 ---
 
-## 🔁 ROS Topics
+## ROS Topics
 
 | Topic | Type | Role |
 |---|---|---|
@@ -72,7 +72,7 @@ When `Error_position < 0.5`, the turtle stops and immediately asks for the next 
 
 ---
 
-## 🚀 Run It Yourself
+## Run It Yourself
 
 ### Requirements
 
@@ -118,7 +118,7 @@ The turtle navigates there and asks for the next goal automatically.
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 ros-turtlesim-swim-to-goal/
@@ -138,7 +138,7 @@ ros-turtlesim-swim-to-goal/
 
 ---
 
-## 👨‍💻 Author
+## Author
 
 **Deepanshu Tanwar**
 Autonomous Systems — Spring 2026
